@@ -55,7 +55,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-app = FastAPI()
 init_db()
 
 
@@ -72,3 +71,53 @@ def add_product(product: Product):
     conn.close()
     return {"message": "Product added to database successfully", "product": product.dict()}
 
+
+@app.get("/products")
+def get_products():
+    conn = sqlite3.connect("products.db")
+    cursor=conn.cursor()
+    cursor.execute('SELECT * FROM products')
+    products = cursor.fetchall()
+    conn.close()
+    return {"products": products}
+
+
+@app.get("/product/{product_id}")
+def get_product(product_id: int):
+    conn = sqlite3.connect("products.db")
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM products WHERE id = ?', (product_id,))
+    product = cursor.fetchone()
+    conn.close()
+    if product:
+        return {"product": product}
+    else:
+        return {"message": "Product not found"}
+
+@app.put("/update_product/{product_id}")
+def update_product(product_id: int, product: Product):
+    conn = sqlite3.connect("products.db")
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE products
+        SET name = ?, price = ?, stock = ?, category = ?
+        WHERE id = ?
+    ''', (product.name, product.price, product.Stock, product.category, product_id))
+    if cursor.rowcount == 0:
+        conn.close()
+        return {"message": "Product not found"}
+    conn.commit()
+    conn.close()
+    return {"message": "Product updated successfully", "product": product.dict()}
+
+@app.delete("/products/{product_id}")
+def delete_product(product_id: int):
+    conn = sqlite3.connect("products.db")
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM products WHERE id = ?', (product_id,))
+    if cursor.rowcount == 0:
+        conn.close()
+        return {"message": "Product not found"}
+    conn.commit()
+    conn.close()
+    return {"message": "Product deleted successfully"}
